@@ -18,20 +18,14 @@ namespace ChatServer
         Console.WriteLine("Server start at port {0}", port);
         listener.Start();
 
-        Console.WriteLine("Waiting for a connection... ");
-        var client = listener.AcceptTcpClient();
-
-        var address = client.Client.RemoteEndPoint.ToString();
-        Console.WriteLine("Client has connected from {0}", address);
-
         while (true)
         {
-          Receive(client);
-          System.Threading.Thread.Sleep(1000);
-        }
+          Console.WriteLine("Waiting for a connection... ");
+          var client = listener.AcceptTcpClient();
 
-        client.Close();
-        Console.WriteLine("Disconnect client {0}", address);
+          var address = client.Client.RemoteEndPoint.ToString();
+          Console.WriteLine("Client has connected from {0}", address);
+        }
       }
       catch (SocketException e)
       {
