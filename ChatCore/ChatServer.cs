@@ -12,6 +12,7 @@ namespace ChatCore
     private TcpListener m_listener;
     private Thread m_handleThread;
     private readonly Dictionary<string, TcpClient> m_clients = new Dictionary<string, TcpClient>();
+    private readonly Dictionary<string, string> m_userNames = new Dictionary<string, string>();
 
     public ChatServer()
     {
@@ -42,6 +43,7 @@ namespace ChatCore
         lock (m_clients)
         {
           m_clients.Add(clientId, client);
+          m_userNames.Add(clientId, "Unknown");
         }
       }
     }
@@ -80,9 +82,22 @@ namespace ChatCore
       var numBytes = client.Available;
       var buffer = new byte[numBytes];
       var bytesRead = stream.Read(buffer, 0, numBytes);
-
       var request = System.Text.Encoding.ASCII.GetString(buffer).Substring(0, bytesRead);
-      Console.WriteLine("Text: {0} from {1}", request, clientId);
+
+      if (request.StartsWith("LOGIN:", StringComparison.OrdinalIgnoreCase))
+      {
+        var tokens = request.Split(':');
+        m_userNames[clientId] = tokens[1];
+        Console.WriteLine("Client {0} Login from {1}", m_userNames[clientId], clientId);
+        return;
+      }
+
+      if (request.StartsWith("MESSAGE:", StringComparison.OrdinalIgnoreCase))
+      {
+        var tokens = request.Split(':');
+        var message = tokens[1];
+        Console.WriteLine("Text: {0} from {1}", message, m_userNames[clientId]);
+      }
     }
   }
 }
