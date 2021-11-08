@@ -1,17 +1,24 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace ChatServer
 {
   internal class Program
   {
+    static HashSet<TcpClient> clients = new HashSet<TcpClient>();
+
     public static void Main(string[] args)
     {
       const int port = 4099;
 
       Console.WriteLine("====================================");
       var listener = new TcpListener(IPAddress.Any, port);
+
+      var theThread = new Thread(HandleMessages);
+      theThread.Start();
 
       try
       {
@@ -25,6 +32,11 @@ namespace ChatServer
 
           var address = client.Client.RemoteEndPoint.ToString();
           Console.WriteLine("Client has connected from {0}", address);
+
+          lock (clients)
+          {
+            clients.Add(client);
+          }
         }
       }
       catch (SocketException e)
@@ -39,9 +51,34 @@ namespace ChatServer
       }
     }
 
+    private static void HandleMessages()
+    {
+      while (true)
+      {
+        lock (clients)
+        {
+          foreach (var client in clients)
+          {
+            try
+            {
+              if (client.Available > 0)
+              {
+                Receive(client);
+              }
+            }
+            catch (Exception e)
+            {
+              Console.WriteLine("Error: {0}", e);
+            }
+          }
+        }
+      }
+    }
+
     private static void Receive(TcpClient client)
     {
       var stream = client.GetStream();
+      var address = client.Client.RemoteEndPoint.ToString();
 
       var numBytes = client.Available;
       if (numBytes == 0)
@@ -53,7 +90,7 @@ namespace ChatServer
       var bytesRead = stream.Read(buffer, 0, numBytes);
 
       var request = System.Text.Encoding.ASCII.GetString(buffer).Substring(0, bytesRead);
-      Console.WriteLine("Text: " + request);
+      Console.WriteLine("Text: {0} from {1}", request, address);
     }
   }
 }
