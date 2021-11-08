@@ -25,6 +25,12 @@ namespace ChatClient
 
       while (true)
       {
+        while( Console.KeyAvailable == false )
+        {
+          client.Refresh();
+          System.Threading.Thread.Sleep( 1 );
+        }
+
         var msg = Console.ReadLine();
 
         if (msg == "exit")

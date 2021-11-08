@@ -52,6 +52,8 @@ namespace ChatCore
     {
       while (true)
       {
+        var disconnectedClients = new List<string>();
+
         lock (m_clients)
         {
           foreach (var clientId in m_clients.Keys)
@@ -60,6 +62,10 @@ namespace ChatCore
 
             try
             {
+              if (!client.Connected)
+              {
+                disconnectedClients.Add(clientId);
+              }
               if (client.Available > 0)
               {
                 ReceiveMessage(clientId);
@@ -67,11 +73,25 @@ namespace ChatCore
             }
             catch (Exception e)
             {
-              Console.WriteLine("Client {0} Error: {1}", clientId, e.Message);
+              Console.WriteLine("Client {0} Receive Error: {1}", clientId, e.Message);
             }
+          }
+
+          foreach (var clientId in disconnectedClients)
+          {
+            RemoveClient(clientId);
           }
         }
       }
+    }
+
+    private void RemoveClient(string clientId)
+    {
+      Console.WriteLine("Client {0} has disconnected...", clientId);
+      var client = m_clients[clientId];
+      m_clients.Remove(clientId);
+      m_userNames.Remove(clientId);
+      client.Close();
     }
 
     private void ReceiveMessage(string clientId)
@@ -97,6 +117,28 @@ namespace ChatCore
         var tokens = request.Split(':');
         var message = tokens[1];
         Console.WriteLine("Text: {0} from {1}", message, m_userNames[clientId]);
+        Broadcast(clientId, message);
+      }
+    }
+
+    private void Broadcast(string senderId, string message)
+    {
+      var data = $"MESSAGE:{m_userNames[senderId]}:{message}";
+      var buffer = System.Text.Encoding.ASCII.GetBytes(data);
+
+      foreach (var clientId in m_clients.Keys)
+      {
+        if (clientId != senderId)
+        {
+          try
+          {
+            m_clients[clientId].GetStream().Write(buffer, 0, buffer.Length);
+          }
+          catch (Exception e)
+          {
+            Console.WriteLine("Client {0} Send Failed: {1}", clientId, e.Message);
+          }
+        }
       }
     }
   }
