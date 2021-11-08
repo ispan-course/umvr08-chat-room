@@ -26,14 +26,13 @@ namespace ChatClient
 
         Console.WriteLine("Connected to chat server");
 
-        var counter = 0;
-        while (counter < 5)
+        Console.WriteLine("Input anything then press Enter...");
+
+        while (true)
         {
-          counter++;
-          var msg = "go-go-go-" + counter;
+          var msg = Console.ReadLine();
           Send(client, msg);
           Console.WriteLine("message sent: " + msg);
-          System.Threading.Thread.Sleep(1000);
         }
       }
       catch (ArgumentNullException e)
