@@ -24,6 +24,12 @@ namespace ChatServer
         var address = client.Client.RemoteEndPoint.ToString();
         Console.WriteLine("Client has connected from {0}", address);
 
+        while (true)
+        {
+          Receive(client);
+          System.Threading.Thread.Sleep(1000);
+        }
+
         client.Close();
         Console.WriteLine("Disconnect client {0}", address);
       }
@@ -37,6 +43,23 @@ namespace ChatServer
         listener.Stop();
         Console.WriteLine("Server shutdown");
       }
+    }
+
+    private static void Receive(TcpClient client)
+    {
+      var stream = client.GetStream();
+
+      var numBytes = client.Available;
+      if (numBytes == 0)
+      {
+        return;
+      }
+
+      var buffer = new byte[numBytes];
+      var bytesRead = stream.Read(buffer, 0, numBytes);
+
+      var request = System.Text.Encoding.ASCII.GetString(buffer).Substring(0, bytesRead);
+      Console.WriteLine("Text: " + request);
     }
   }
 }
