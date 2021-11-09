@@ -22,6 +22,17 @@ namespace ChatCoreTest
       {
         Console.Write(m_PacketData[i] + ", ");
       }
+
+      Console.WriteLine("");
+
+      // seek to the head
+      m_Pos = 0;
+
+      Read(out int age);
+      Read(out float score);
+      Read(out string message);
+
+      Console.WriteLine("age: " + age + ", score: " + score + ", message: " + message);
     }
 
     // write an integer into a byte array
@@ -55,6 +66,66 @@ namespace ChatCoreTest
       }
 
       _Write(bytes);
+      return true;
+    }
+
+    // read an integer from packet's byte array
+    private static bool Read(out int i)
+    {
+      if (BitConverter.IsLittleEndian)
+      {
+        var byteData = new byte[sizeof(int)];
+        Buffer.BlockCopy(m_PacketData, (int)m_Pos, byteData, 0, byteData.Length);
+        Array.Reverse(byteData);
+        i = BitConverter.ToInt32(byteData, 0);
+      }
+      else
+      {
+        i = BitConverter.ToInt32(m_PacketData, (int)m_Pos);
+      }
+
+      m_Pos += sizeof(int);
+      return true;
+    }
+
+    // read an float from packet's byte array
+    private static bool Read(out float f)
+    {
+      if (BitConverter.IsLittleEndian)
+      {
+        var byteData = new byte[sizeof(float)];
+        Buffer.BlockCopy(m_PacketData, (int)m_Pos, byteData, 0, byteData.Length);
+        Array.Reverse(byteData);
+        f = BitConverter.ToSingle(byteData, 0);
+      }
+      else
+      {
+        f = BitConverter.ToSingle(m_PacketData, (int)m_Pos);
+      }
+
+      m_Pos += sizeof(float);
+      return true;
+    }
+
+    // read a string from packet's byte array
+    private static bool Read(out string str)
+    {
+      // read string length
+      Read(out int length);
+
+      if (BitConverter.IsLittleEndian)
+      {
+        var byteData = new byte[length];
+        Buffer.BlockCopy(m_PacketData, (int)m_Pos, byteData, 0, length);
+        Array.Reverse(byteData);
+        str = Encoding.Unicode.GetString(byteData, 0, length);
+      }
+      else
+      {
+        str = Encoding.Unicode.GetString(m_PacketData, (int)m_Pos, length);
+      }
+
+      m_Pos += (uint)length;
       return true;
     }
 
