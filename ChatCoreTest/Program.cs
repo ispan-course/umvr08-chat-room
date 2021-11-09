@@ -1,172 +1,88 @@
 ﻿using System;
 using System.Text;
+using ChatCore;
 
 namespace ChatCoreTest
 {
   internal class Program
   {
-    private static byte[] m_PacketData;
-    private static uint m_Pos;
-
     public static void Main(string[] args)
     {
-      m_PacketData = new byte[1024];
-      m_Pos = 0;
+      var loginCommand = new LoginCommand { m_Name = "Arthur" };
+      var messageCommand = new MessageCommand { m_UserName = "JoJo", m_Message = "Hello!" };
 
-      // write dummy of length
-      Write(0);
+      var length1 = SerializeCommand(loginCommand, out var buffer1);
+      printBuffer(buffer1, length1);
+      var command1 = UnserializeBuffer(buffer1);
+      printCommand(command1);
 
-      Write(109);
-      Write(109.99f);
-      Write("Hello!");
+      var length2 = SerializeCommand(messageCommand, out var buffer2);
+      printBuffer(buffer2, length2);
+      var command2 = UnserializeBuffer(buffer2);
+      printCommand(command2);
+    }
 
-      // get current position of byte array
-      var pos = Tell();
+    private static int SerializeCommand(Command command, out byte[] buffer)
+    {
+      command.Serialize();
+      buffer = command.SealPacketBuffer(out var length);
 
-      // seek to the head
-      Seek(0);
+      return length;
+    }
 
-      // write actual length
-      var dataLength = (int)pos - sizeof(int);
-      Write(dataLength);
+    private static Command UnserializeBuffer(byte[] buffer)
+    {
+      Command.FetchHeader(out var length, out var commandType, buffer, 0);
+      Console.WriteLine("Command: {0}, Length: {1}", (Command.Type)commandType, length);
 
-      // seek to the original position
-      Seek(pos);
+      Command command;
 
-      Console.Write($"Output Byte array(length:{m_Pos}): ");
-      for (var i = 0; i < m_Pos; i++)
+      switch (commandType)
       {
-        Console.Write(m_PacketData[i] + ", ");
+        case (int)Command.Type.LOGIN:
+          command = new LoginCommand();
+          break;
+        case (int)Command.Type.MESSAGE:
+          command = new MessageCommand();
+          break;
+        default:
+          // invalid command type
+          return null;
+      }
+
+      command.UnSealPacketBuffer(buffer, 0);
+      command.Unserialize();
+
+      return command;
+    }
+
+    private static void printBuffer(byte[] buffer, int length)
+    {
+      Console.Write($"Output Byte array(length:{length}): ");
+      for (var i = 0; i < length; i++)
+      {
+        Console.Write(buffer[i] + ", ");
       }
 
       Console.WriteLine("");
-
-      // seek to the head
-      Seek(0);
-
-      Read(out int length);
-      Read(out int age);
-      Read(out float score);
-      Read(out string message);
-
-      Console.WriteLine("length: " + length + ", age: " + age + ", score: " + score + ", message: " + message);
     }
 
-    // write an integer into a byte array
-    private static bool Write(int i)
+    private static void printCommand(Command command)
     {
-      // convert int to byte array
-      var bytes = BitConverter.GetBytes(i);
-      _Write(bytes);
-      return true;
-    }
-
-    // write a float into a byte array
-    private static bool Write(float f)
-    {
-      // convert int to byte array
-      var bytes = BitConverter.GetBytes(f);
-      _Write(bytes);
-      return true;
-    }
-
-    // write a string into a byte array
-    private static bool Write(string s)
-    {
-      // convert string to byte array
-      var bytes = Encoding.Unicode.GetBytes(s);
-
-      // write byte array length to packet's byte array
-      if (Write(bytes.Length) == false)
+      if (command == null)
       {
-        return false;
+        return;
       }
 
-      _Write(bytes);
-      return true;
-    }
-
-    // read an integer from packet's byte array
-    private static bool Read(out int i)
-    {
-      if (BitConverter.IsLittleEndian)
+      switch (command.CommandID)
       {
-        var byteData = new byte[sizeof(int)];
-        Buffer.BlockCopy(m_PacketData, (int)m_Pos, byteData, 0, byteData.Length);
-        Array.Reverse(byteData);
-        i = BitConverter.ToInt32(byteData, 0);
+        case (int)Command.Type.LOGIN:
+          Console.WriteLine("Login Name: {0}", ((LoginCommand)command).m_Name);
+          break;
+        case (int)Command.Type.MESSAGE:
+          Console.WriteLine("{0} say: {1}", ((MessageCommand)command).m_UserName, ((MessageCommand)command).m_Message);
+          break;
       }
-      else
-      {
-        i = BitConverter.ToInt32(m_PacketData, (int)m_Pos);
-      }
-
-      m_Pos += sizeof(int);
-      return true;
-    }
-
-    // read an float from packet's byte array
-    private static bool Read(out float f)
-    {
-      if (BitConverter.IsLittleEndian)
-      {
-        var byteData = new byte[sizeof(float)];
-        Buffer.BlockCopy(m_PacketData, (int)m_Pos, byteData, 0, byteData.Length);
-        Array.Reverse(byteData);
-        f = BitConverter.ToSingle(byteData, 0);
-      }
-      else
-      {
-        f = BitConverter.ToSingle(m_PacketData, (int)m_Pos);
-      }
-
-      m_Pos += sizeof(float);
-      return true;
-    }
-
-    // read a string from packet's byte array
-    private static bool Read(out string str)
-    {
-      // read string length
-      Read(out int length);
-
-      if (BitConverter.IsLittleEndian)
-      {
-        var byteData = new byte[length];
-        Buffer.BlockCopy(m_PacketData, (int)m_Pos, byteData, 0, length);
-        Array.Reverse(byteData);
-        str = Encoding.Unicode.GetString(byteData, 0, length);
-      }
-      else
-      {
-        str = Encoding.Unicode.GetString(m_PacketData, (int)m_Pos, length);
-      }
-
-      m_Pos += (uint)length;
-      return true;
-    }
-
-    // write a byte array into packet's byte array
-    private static void _Write(byte[] byteData)
-    {
-      // converter little-endian to network's big-endian
-      if (BitConverter.IsLittleEndian)
-      {
-        Array.Reverse(byteData);
-      }
-
-      byteData.CopyTo(m_PacketData, m_Pos);
-      m_Pos += (uint)byteData.Length;
-    }
-
-    private static uint Tell()
-    {
-      return m_Pos;
-    }
-
-    private static void Seek(uint pos)
-    {
-      m_Pos = pos;
     }
   }
 }
