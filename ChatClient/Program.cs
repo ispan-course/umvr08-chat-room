@@ -34,7 +34,7 @@ namespace ChatClient
         if (msg == "exit")
         {
           Console.WriteLine("<Bye...>");
-          client.Disconnect();
+          client.Bye();
           break;
         }
 

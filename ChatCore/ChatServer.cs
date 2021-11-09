@@ -43,6 +43,7 @@ namespace ChatCore
 
         var transmitter = new Transmitter(clientId, client);
         transmitter.Register<LoginCommand>(OnLoginCommand);
+        transmitter.Register<ExitCommand>(OnExitCommand);
         transmitter.Register<MessageCommand>(OnMessageCommand);
 
         lock (m_transmitters)
@@ -108,6 +109,19 @@ namespace ChatCore
       m_userNames[transmitter.ClientID] = cmd.m_Name;
       Console.WriteLine("Client {0} Login from {1}",
         m_userNames[transmitter.ClientID], transmitter.ClientID);
+    }
+
+    public void OnExitCommand(Transmitter transmitter, ExitCommand cmd)
+    {
+      transmitter.Disconnect();
+
+      Console.WriteLine("Client {0} leave", m_userNames[transmitter.ClientID]);
+
+      lock (m_transmitters)
+      {
+        m_transmitters.Remove(transmitter.ClientID);
+        m_userNames.Remove(transmitter.ClientID);
+      }
     }
 
     public void OnMessageCommand(Transmitter sender, MessageCommand cmd)
