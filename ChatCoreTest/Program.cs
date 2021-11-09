@@ -13,9 +13,25 @@ namespace ChatCoreTest
       m_PacketData = new byte[1024];
       m_Pos = 0;
 
+      // write dummy of length
+      Write(0);
+
       Write(109);
       Write(109.99f);
       Write("Hello!");
+
+      // get current position of byte array
+      var pos = Tell();
+
+      // seek to the head
+      Seek(0);
+
+      // write actual length
+      var dataLength = (int)pos - sizeof(int);
+      Write(dataLength);
+
+      // seek to the original position
+      Seek(pos);
 
       Console.Write($"Output Byte array(length:{m_Pos}): ");
       for (var i = 0; i < m_Pos; i++)
@@ -26,13 +42,14 @@ namespace ChatCoreTest
       Console.WriteLine("");
 
       // seek to the head
-      m_Pos = 0;
+      Seek(0);
 
+      Read(out int length);
       Read(out int age);
       Read(out float score);
       Read(out string message);
 
-      Console.WriteLine("age: " + age + ", score: " + score + ", message: " + message);
+      Console.WriteLine("length: " + length + ", age: " + age + ", score: " + score + ", message: " + message);
     }
 
     // write an integer into a byte array
@@ -140,6 +157,16 @@ namespace ChatCoreTest
 
       byteData.CopyTo(m_PacketData, m_Pos);
       m_Pos += (uint)byteData.Length;
+    }
+
+    private static uint Tell()
+    {
+      return m_Pos;
+    }
+
+    private static void Seek(uint pos)
+    {
+      m_Pos = pos;
     }
   }
 }
