@@ -41,9 +41,9 @@ namespace ChatCore
       Console.WriteLine("Disconnected");
     }
 
-    public void SetName(string name)
+    public void SetName(string name, string password)
     {
-      var data = "LOGIN:" + name;
+      var data = "LOGIN:" + name + ":" + password;
       SendData(data);
     }
 
@@ -57,6 +57,45 @@ namespace ChatCore
     {
       var requestBuffer = System.Text.Encoding.ASCII.GetBytes(data);
       m_client.GetStream().Write(requestBuffer, 0, requestBuffer.Length);
+    }
+    
+    
+    public void Refresh()
+    {
+      if (m_client.Available > 0)
+      {
+        HandleReceiveMessages(m_client);
+      }
+    }
+
+    private void HandleReceiveMessages(TcpClient client)
+    {
+      var stream = client.GetStream();
+
+      var numBytes = client.Available;
+      var buffer = new byte[numBytes];
+      var bytesRead = stream.Read(buffer, 0, numBytes);
+      var request = System.Text.Encoding.ASCII.GetString(buffer).Substring(0, bytesRead);
+
+      if (request.StartsWith("LOGIN:1", StringComparison.OrdinalIgnoreCase))
+      {
+        Console.WriteLine("Login succeed");
+        return;
+      }
+
+      if (request.StartsWith("LOGIN:0", StringComparison.OrdinalIgnoreCase))
+      {
+        Console.WriteLine("Login failed");
+        return;
+      }
+
+      if (request.StartsWith("MESSAGE:", StringComparison.OrdinalIgnoreCase))
+      {
+        var tokens = request.Split(':');
+        var sender = tokens[1];
+        var message = tokens[2];
+        Console.WriteLine("{0}: {1}", sender, message);
+      }
     }
   }
 }
