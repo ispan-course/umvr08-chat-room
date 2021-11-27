@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 
 namespace ChatCore
@@ -6,9 +7,11 @@ namespace ChatCore
   public class ChatClient
   {
     private TcpClient m_client;
+    private List<KeyValuePair<string,string>> m_messageList;
 
     public ChatClient()
     {
+      m_messageList = new List<KeyValuePair<string, string>>();
     }
 
     public bool Connect(string address, int port)
@@ -49,6 +52,14 @@ namespace ChatCore
       }
     }
 
+    public List<KeyValuePair<string, string>> GetMessages()
+    {
+      var messages = new List<KeyValuePair<string, string>>(m_messageList);
+      m_messageList.Clear();
+
+      return messages;
+    }
+
     private void HandleReceiveMessages(TcpClient client)
     {
       var stream = client.GetStream();
@@ -63,7 +74,7 @@ namespace ChatCore
         var tokens = request.Split(':');
         var sender = tokens[1];
         var message = tokens[2];
-        Console.WriteLine("{0}: {1}", sender, message);
+        m_messageList.Add(new KeyValuePair<string, string>(sender, message));
       }
     }
 
